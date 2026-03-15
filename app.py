@@ -58,7 +58,8 @@ def google_sheets_yukle():
                     break
         else:
             for sheet_name, gid in sheets.items():
-                if 'GEÇMİŞ' in sheet_name.upper() or 'GECMIS' in sheet_name.upper() or 'ALIŞ' in sheet_name.upper():
+                # ✅ DÜZELTİLDİ: Sadece geçmiş sayfasını atla, Alış Fiyatı sayfasını atlama
+                if 'GEÇMİŞ' in sheet_name.upper() or 'GECMIS' in sheet_name.upper():
                     continue
                 url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={gid}"
                 try:
@@ -79,7 +80,8 @@ def google_sheets_yukle():
         tum2 = []
         xl = pd.ExcelFile("market_fisi_urunler_2.xlsx")
         for sheet in xl.sheet_names:
-            if 'GEÇMİŞ' in sheet.upper() or 'ALIŞ' in sheet.upper():
+            # ✅ DÜZELTİLDİ: Sadece geçmiş sayfasını atla, Alış Fiyatı sayfasını atlama
+            if 'GEÇMİŞ' in sheet.upper() or 'GECMIS' in sheet.upper():
                 continue
             df = pd.read_excel("market_fisi_urunler_2.xlsx", sheet_name=sheet)
             df['Market'] = sheet
@@ -487,7 +489,6 @@ def debug():
         'gecmis_toplam': len(g) if g is not None else 0
     })
 
-
 @app.route('/gecmis-debug')
 def gecmis_debug():
     try:
@@ -495,6 +496,7 @@ def gecmis_debug():
         return jsonify({'sheets': list(sheets.keys()), 'sheet_ids': sheets})
     except Exception as e:
         return jsonify({'hata': str(e)})
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
