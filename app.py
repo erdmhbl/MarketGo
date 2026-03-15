@@ -429,13 +429,14 @@ async function tumunuSil() {
 
 async function whatsappGonder() {
   const data = await fetch('/eksik-liste').then(r=>r.json());
-  if (!data.length) { toast('Liste boş!', '#e74c3c'); return; }
-  let metin = '🛒 *EKSİK ÜRÜN LİSTESİ*' + '\n\n';
-  data.forEach((r,i) => {
-    const durum = r.durum==='Alındı' ? '✅' : '⬜';
-    metin += durum + ' ' + (i+1) + '. ' + r.urun + ' — ' + parseFloat(r.fiyat||0).toFixed(2) + ' ₺ (' + r.market + ')' + '\n';
-  });
-  metin += '\n📅 ' + new Date().toLocaleDateString('tr-TR');
+  if (!data.length) { toast('Liste bos!', '#e74c3c'); return; }
+  var nl = String.fromCharCode(10);
+  var metin = String.fromCharCode(128, 240, 159, 155, 178) || '';
+  metin = data.reduce(function(m, r, i) {
+    var durum = r.durum === 'Al\u0131nd\u0131' ? '[v]' : '[ ]';
+    return m + durum + ' ' + (i+1) + '. ' + r.urun + ' - ' + parseFloat(r.fiyat||0).toFixed(2) + ' TL (' + r.market + ')' + nl;
+  }, 'EKSIK URUN LISTESI' + nl + nl);
+  metin += nl + new Date().toLocaleDateString('tr-TR');
   window.open('https://wa.me/?text=' + encodeURIComponent(metin), '_blank');
 }
 
