@@ -91,17 +91,15 @@ def google_sheets_yukle():
 def gecmis_yukle():
     """ALIŞ GEÇMİŞİ sayfasını Google Sheets'ten yükle"""
     try:
-        sheets = sheet_listesi_al()
-        if sheets:
-            for sheet_name, gid in sheets.items():
-                if 'GEÇMİŞ' in sheet_name.upper() or 'ALIŞ' in sheet_name.upper():
-                    url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={gid}"
-                    r = requests.get(url, timeout=10)
-                    if r.status_code == 200:
-                        df = pd.read_csv(io.StringIO(r.content.decode('utf-8')))
-                        df = df.dropna(how='all')
-                        print(f"✅ Geçmiş yüklendi: {len(df)} kayıt")
-                        return df
+        # Sabit GID ile direkt çek
+        GECMIS_GID = "574689991"
+        url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={GECMIS_GID}"
+        r = requests.get(url, timeout=10)
+        if r.status_code == 200 and len(r.content) > 50:
+            df = pd.read_csv(io.StringIO(r.content.decode('utf-8')))
+            df = df.dropna(how='all')
+            print(f"✅ Geçmiş yüklendi: {len(df)} kayıt")
+            return df
         # Yedek: Excel'den oku
         if os.path.exists("market_fisi_urunler_2.xlsx"):
             xl = pd.ExcelFile("market_fisi_urunler_2.xlsx")
