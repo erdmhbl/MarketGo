@@ -50,7 +50,7 @@ def google_sheets_yukle():
                 try:
                     r = requests.get(url, timeout=10)
                     if r.status_code == 200 and len(r.content) > 100:
-                        df = pd.read_csv(io.StringIO(r.text))
+                        df = pd.read_csv(io.StringIO(r.content.decode('utf-8')))
                         market_adi = excel_sheets[i] if i < len(excel_sheets) else f"Sayfa{i+1}"
                         df['Market'] = market_adi
                         tum.append(df)
@@ -64,7 +64,7 @@ def google_sheets_yukle():
                 try:
                     r = requests.get(url, timeout=10)
                     if r.status_code == 200:
-                        df = pd.read_csv(io.StringIO(r.text))
+                        df = pd.read_csv(io.StringIO(r.content.decode('utf-8')))
                         df['Market'] = sheet_name
                         tum.append(df)
                 except Exception as e:
@@ -83,13 +83,8 @@ def google_sheets_yukle():
                 continue
             df = pd.read_excel("market_fisi_urunler_2.xlsx", sheet_name=sheet)
             df['Market'] = sheet
-            yeni_kolonlar = {}
-            for col in df.columns:
-                try:
-                    yeni_kolonlar[col] = col.encode('latin1').decode('utf-8')
-                except:
-                    yeni_kolonlar[col] = col
-            df.rename(columns=yeni_kolonlar, inplace=True)
+            # Sütun adlarını normalize et
+            df.columns = ['Barkod', 'Ürün Adı', 'Birim Fiyat', 'MARKA'][:len(df.columns)]
             tum2.append(df)
         return pd.concat(tum2, ignore_index=True)
     return None
