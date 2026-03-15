@@ -10,8 +10,16 @@ CACHE_SURE = 300
 
 def tr_normalize(metin):
     """Türkçe karakterleri ASCII karşılıklarına çevirir — arama karşılaştırması için"""
-    tablo = str.maketrans('çğıöşüÇĞİÖŞÜ', 'cgiosuCGIOSU')
-    return str(metin).lower().translate(tablo)
+    metin = str(metin)
+    metin = metin.replace('İ', 'i').replace('I', 'i')
+    metin = metin.lower()
+    metin = metin.replace('ı', 'i')
+    metin = metin.replace('ç', 'c')
+    metin = metin.replace('ğ', 'g')
+    metin = metin.replace('ö', 'o')
+    metin = metin.replace('ş', 's')
+    metin = metin.replace('ü', 'u')
+    return metin
 
 def tr_aramayi_hazirla(seri, kelime):
     """Hem veriyi hem aramayı normalize ederek karşılaştırır"""
