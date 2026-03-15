@@ -489,6 +489,14 @@ def debug():
         'gecmis_toplam': len(g) if g is not None else 0
     })
 
+
+@app.route('/gecmis-debug')
+def gecmis_debug():
+    try:
+        sheets = sheet_listesi_al()
+        return jsonify({'sheets': list(sheets.keys()), 'sheet_ids': sheets})
+    except Exception as e:
+        return jsonify({'hata': str(e)})
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
