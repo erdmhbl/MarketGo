@@ -1,5 +1,6 @@
 flask
 pandas
-openpyxl
-gunicorn
 requests
+gspread
+google-auth
+openpyxl
