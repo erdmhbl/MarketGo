@@ -305,14 +305,15 @@ async function ara() {
     bulunan.textContent='0 ürün bulundu'; bulunan.style.color='#e74c3c';
   } else {
     bulunan.textContent=data.length+' ürün bulundu'; bulunan.style.color='#2ecc71';
-    tbody.innerHTML=data.map(r=>`
-      <tr>
+    tbody.innerHTML=data.map(r=>{
+      const urunJs = r.urun.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return `<tr>
         <td style="color:#a8a8b3;font-size:0.85rem">${r.tarih}</td>
-        <td style="cursor:pointer" onclick="urunGecmis('${r.urun.replace(/'/g,"\\'")}')">${r.urun}</td>
+        <td style="cursor:pointer" onclick="urunGecmis('${urunJs}')">${r.urun}</td>
         <td class="fiyat">💰 ${r.fiyat} ₺</td>
         <td><span class="market-badge">${r.market}</span></td>
-        <td><button class="ekle-btn" onclick="eksikEkle(this,'${r.urun.replace(/'/g,"\\'")}','${r.fiyat}','${r.market}')">+ Eksik</button></td>
-      </tr>`).join('');
+        <td><button class="ekle-btn" onclick="eksikEkle(this,'${urunJs}','${r.fiyat}','${r.market}')">+ Eksik</button></td>
+      </tr>`;}).join('');
   }
 }
 
