@@ -275,8 +275,13 @@ const tbody = document.getElementById('sonuclar');
 const bulunan = document.getElementById('bulunan');
 const bilgi = document.getElementById('bilgi');
 
+// Sayfa açılır açılmaz Yükleniyor'u kaldır
+tbody.innerHTML = '<tr><td colspan="4" class="bos">Ürün adı veya barkod girerek arama yapın...</td></tr>';
+
 fetch('/durum').then(r=>r.json()).then(d => {
   bilgi.textContent = d.toplam ? `📦 Toplam ${d.toplam} ürün  •  Son güncelleme: ${d.zaman}` : '';
+  tbody.innerHTML = '<tr><td colspan="4" class="bos">Ürün adı veya barkod girerek arama yapın...</td></tr>';
+}).catch(() => {
   tbody.innerHTML = '<tr><td colspan="4" class="bos">Ürün adı veya barkod girerek arama yapın...</td></tr>';
 });
 
