@@ -8,20 +8,15 @@ SHEET_ID = "1qNwL82ctBVHhGv3vtrFT1mjHN1KeN9Dt2OkI8Vg5XLM"
 _cache = {"df": None, "gecmis": None, "zaman": 0, "gecmis_zaman": 0}
 CACHE_SURE = 300
 
-TR_MAP = {
-    'u': 'ü', 'ü': 'u', 'c': 'ç', 'ç': 'c',
-    'i': 'ı', 'ı': 'i', 'o': 'ö', 'ö': 'o',
-    's': 'ş', 'ş': 's',
-}
+def tr_normalize(metin):
+    """Türkçe karakterleri ASCII karşılıklarına çevirir — arama karşılaştırması için"""
+    tablo = str.maketrans('çğıöşüÇĞİÖŞÜ', 'cgiosuCGIOSU')
+    return str(metin).lower().translate(tablo)
 
-def tr_varyantlar(kelime):
-    sonuclar = {kelime}
-    for k, v in TR_MAP.items():
-        yeni = set()
-        for s in sonuclar:
-            yeni.add(s.replace(k, v))
-        sonuclar |= yeni
-    return sonuclar
+def tr_aramayi_hazirla(seri, kelime):
+    """Hem veriyi hem aramayı normalize ederek karşılaştırır"""
+    kelime_norm = tr_normalize(kelime)
+    return seri.astype(str).apply(tr_normalize).str.contains(kelime_norm, na=False, regex=False)
 
 def sheet_listesi_al():
     import re
@@ -398,11 +393,7 @@ def ara():
     urun_col  = col_map.get(next((c for c in cols_norm if 'ürün' in c.lower() or 'urun' in c.lower() or 'ad' in c.lower()), cols_norm[1] if len(cols_norm)>1 else cols_norm[0]))
     fiyat_col = col_map.get(next((c for c in cols_norm if 'fiyat' in c.lower()), cols_norm[2] if len(cols_norm)>2 else cols_norm[0]))
     barkod_col= col_map.get(next((c for c in cols_norm if 'barkod' in c.lower()), cols_norm[0]))
-    varyantlar = tr_varyantlar(q)
-    maske = pd.Series([False]*len(df))
-    for v in varyantlar:
-        maske |= df[urun_col].astype(str).str.lower().str.contains(v, na=False)
-        maske |= df[barkod_col].astype(str).str.lower().str.contains(v, na=False)
+    maske = tr_aramayi_hazirla(df[urun_col], q) | tr_aramayi_hazirla(df[barkod_col], q)
     return jsonify([
         {'urun':str(r[urun_col]),'fiyat':f"{float(str(r[fiyat_col]).replace(',','.')):.2f}",'market':str(r.get('Market','-')),'barkod':str(r[barkod_col])}
         for _,r in df[maske].iterrows()
@@ -422,10 +413,7 @@ def gecmis():
     urun = request.args.get('urun','').strip().lower()
     sonuc = df.copy()
     if urun:
-        varyantlar = tr_varyantlar(urun)
-        maske = pd.Series([False]*len(sonuc))
-        for v in varyantlar:
-            maske |= sonuc[urun_col].astype(str).str.lower().str.contains(v, na=False)
+        maske = tr_aramayi_hazirla(sonuc[urun_col], urun)
         sonuc = sonuc[maske]
     if bas:
         try: sonuc = sonuc[pd.to_datetime(sonuc[tarih_col], dayfirst=True, errors='coerce') >= pd.to_datetime(bas)]
