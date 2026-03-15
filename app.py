@@ -209,14 +209,25 @@ def ara():
     if not q or df is None:
         return jsonify([])
     varyantlar = tr_varyantlar(q)
+    
+    # Sütun adlarını esnek bul
+    cols = df.columns.tolist()
+    urun_col  = next((c for c in cols if 'r' in c.lower() and 'n' in c.lower() and 'ad' in c.lower()), cols[1] if len(cols)>1 else cols[0])
+    fiyat_col = next((c for c in cols if 'fiyat' in c.lower() or 'price' in c.lower()), cols[2] if len(cols)>2 else cols[0])
+    barkod_col= next((c for c in cols if 'barkod' in c.lower() or 'barcode' in c.lower()), cols[0])
+    
     maske = pd.Series([False] * len(df))
     for v in varyantlar:
-        maske |= (
-            df['Ürün Adı'].astype(str).str.lower().str.contains(v, na=False) |
-            df['Barkod'].astype(str).str.lower().str.contains(v, na=False)
-        )
+        maske |= df[urun_col].astype(str).str.lower().str.contains(v, na=False)
+        maske |= df[barkod_col].astype(str).str.lower().str.contains(v, na=False)
+    
     return jsonify([
-        {'urun': str(r['Ürün Adı']), 'fiyat': f"{float(str(r['Birim Fiyat']).replace(',','.')):.2f}", 'market': str(r['Market']), 'barkod': str(r['Barkod'])}
+        {
+            'urun': str(r[urun_col]),
+            'fiyat': f"{float(str(r[fiyat_col]).replace(',','.')):.2f}",
+            'market': str(r.get('Market', r.get('market', '-'))),
+            'barkod': str(r[barkod_col])
+        }
         for _, r in df[maske].iterrows()
     ])
 
@@ -235,6 +246,13 @@ def durum():
     zaman = datetime.fromtimestamp(_cache["zaman"]).strftime("%H:%M:%S") if _cache["zaman"] else "-"
     return jsonify({"toplam": len(df), "zaman": zaman})
 
+
+@app.route('/debug')
+def debug():
+    df = veri_al()
+    if df is None:
+        return jsonify({'hata': 'veri yok'})
+    return jsonify({'kolonlar': df.columns.tolist(), 'ilk_satir': df.iloc[0].to_dict() if len(df)>0 else {}, 'toplam': len(df)})
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port)
