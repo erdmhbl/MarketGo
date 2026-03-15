@@ -37,60 +37,42 @@ def sheet_listesi_al():
         return {}
 
 def google_sheets_yukle():
-    tum = []
+    """Sadece ALIŞ FİYATLARI sayfasından veri çeker.
+    Sütun yapısı: Tarih | Ürün Adı | Barkod | Alış Fiyatı | Market
+    """
     try:
         sheets = sheet_listesi_al()
-        if not sheets:
-            excel_sheets = []
-            if os.path.exists("market_fisi_urunler_2.xlsx"):
-                try:
-                    xl2 = pd.ExcelFile("market_fisi_urunler_2.xlsx")
-                    excel_sheets = xl2.sheet_names
-                except:
-                    pass
-            for i in range(5):
-                url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={i}"
-                try:
-                    r = requests.get(url, timeout=10)
-                    if r.status_code == 200 and len(r.content) > 100:
-                        df = pd.read_csv(io.StringIO(r.content.decode('utf-8')))
-                        market_adi = excel_sheets[i] if i < len(excel_sheets) else f"Sayfa{i+1}"
-                        df['Market'] = market_adi
-                        tum.append(df)
-                except:
-                    break
-        else:
-            for sheet_name, gid in sheets.items():
-                # ✅ DÜZELTİLDİ: Sadece geçmiş sayfasını atla, Alış Fiyatı sayfasını atlama
-                if 'GEÇMİŞ' in sheet_name.upper() or 'GECMIS' in sheet_name.upper():
-                    continue
-                url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={gid}"
-                try:
-                    r = requests.get(url, timeout=10)
-                    if r.status_code == 200:
-                        df = pd.read_csv(io.StringIO(r.content.decode('utf-8')))
-                        df['Market'] = sheet_name
-                        tum.append(df)
-                except Exception as e:
-                    print(f"❌ {sheet_name}: {e}")
-        if tum:
-            return pd.concat(tum, ignore_index=True)
+        # ALIŞ FİYATLARI sayfasını bul
+        alis_gid = None
+        for sheet_name, gid in sheets.items():
+            norm = tr_normalize(sheet_name)
+            if 'alis' in norm and 'fiyat' in norm:
+                alis_gid = gid
+                print(f"✅ Alış Fiyatları sayfası bulundu: {sheet_name} (gid={gid})")
+                break
+        if alis_gid:
+            url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={alis_gid}"
+            r = requests.get(url, timeout=10)
+            if r.status_code == 200 and len(r.content) > 50:
+                df = pd.read_csv(io.StringIO(r.content.decode('utf-8')))
+                df = df.dropna(how='all')
+                df.columns = [c.strip() for c in df.columns]
+                print(f"✅ Alış Fiyatları yüklendi: {len(df)} kayıt, sütunlar: {df.columns.tolist()}")
+                return df
+        print("⚠️ ALIŞ FİYATLARI sayfası bulunamadı, mevcut sayfalar:", list(sheets.keys()))
     except Exception as e:
         print(f"Sheets hatası: {e}")
 
+    # Yedek: Excel'den oku
     if os.path.exists("market_fisi_urunler_2.xlsx"):
         print("⚠️ Yedek Excel kullanılıyor")
-        tum2 = []
         xl = pd.ExcelFile("market_fisi_urunler_2.xlsx")
         for sheet in xl.sheet_names:
-            # ✅ DÜZELTİLDİ: Sadece geçmiş sayfasını atla, Alış Fiyatı sayfasını atlama
-            if 'GEÇMİŞ' in sheet.upper() or 'GECMIS' in sheet.upper():
-                continue
-            df = pd.read_excel("market_fisi_urunler_2.xlsx", sheet_name=sheet)
-            df['Market'] = sheet
-            df.columns = ['Barkod', 'Ürün Adı', 'Birim Fiyat', 'MARKA'][:len(df.columns)]
-            tum2.append(df)
-        return pd.concat(tum2, ignore_index=True)
+            norm = tr_normalize(sheet)
+            if 'alis' in norm and 'fiyat' in norm:
+                df = pd.read_excel("market_fisi_urunler_2.xlsx", sheet_name=sheet)
+                df = df.dropna(how='all')
+                return df
     return None
 
 def gecmis_yukle():
@@ -214,7 +196,7 @@ HTML = """<!DOCTYPE html>
   </div>
   <div class="bulunan" id="bulunan"></div>
   <table>
-    <thead><tr><th>Ürün Adı</th><th>Birim Fiyat</th><th>Market</th><th>Barkod</th></tr></thead>
+    <thead><tr><th>Tarih</th><th>Ürün Adı</th><th>Alış Fiyatı</th><th>Market</th><th>Barkod</th></tr></thead>
     <tbody id="sonuclar"><tr><td colspan="4" class="bos">Ürün adı veya barkod girerek arama yapın...</td></tr></tbody>
   </table>
   <div class="bilgi" id="bilgi"></div>
@@ -277,7 +259,7 @@ async function ara() {
   } else {
     bulunan.textContent=data.length+' ürün bulundu'; bulunan.style.color='#2ecc71';
     tbody.innerHTML=data.map(r=>`<tr onclick="urunGecmis('${r.urun.replace(/'/g,"\\'")}')">
-      <td>${r.urun}</td><td class="fiyat">💰 ${r.fiyat} ₺</td>
+      <td style="color:#a8a8b3;font-size:0.85rem">${r.tarih}</td><td>${r.urun}</td><td class="fiyat">💰 ${r.fiyat} ₺</td>
       <td><span class="market-badge">${r.market}</span></td>
       <td style="color:#888;font-size:0.82rem">${r.barkod}</td></tr>`).join('');
   }
@@ -393,18 +375,23 @@ def ara():
     df = veri_al()
     if not q or df is None: return jsonify([])
     cols = df.columns.tolist()
-    cols_norm = []
-    for c in cols:
-        try: cols_norm.append(c.encode('latin1').decode('utf-8'))
-        except: cols_norm.append(c)
-    col_map = dict(zip(cols_norm, cols))
-    urun_col  = col_map.get(next((c for c in cols_norm if 'ürün' in c.lower() or 'urun' in c.lower() or 'ad' in c.lower()), cols_norm[1] if len(cols_norm)>1 else cols_norm[0]))
-    fiyat_col = col_map.get(next((c for c in cols_norm if 'fiyat' in c.lower()), cols_norm[2] if len(cols_norm)>2 else cols_norm[0]))
-    barkod_col= col_map.get(next((c for c in cols_norm if 'barkod' in c.lower()), cols_norm[0]))
+    # Sütunları normalize isimlerle eşleştir
+    col_norm = {tr_normalize(c): c for c in cols}
+    urun_col   = col_norm.get(next((k for k in col_norm if 'urun' in k or 'adi' in k or 'ad' in k), cols[1] if len(cols)>1 else cols[0]))
+    fiyat_col  = col_norm.get(next((k for k in col_norm if 'fiyat' in k), cols[3] if len(cols)>3 else cols[2]))
+    barkod_col = col_norm.get(next((k for k in col_norm if 'barkod' in k), cols[2] if len(cols)>2 else cols[0]))
+    market_col = col_norm.get(next((k for k in col_norm if 'market' in k), cols[4] if len(cols)>4 else cols[-1]))
+    tarih_col  = col_norm.get(next((k for k in col_norm if 'tarih' in k), cols[0]))
     maske = tr_aramayi_hazirla(df[urun_col], q) | tr_aramayi_hazirla(df[barkod_col], q)
     return jsonify([
-        {'urun':str(r[urun_col]),'fiyat':f"{float(str(r[fiyat_col]).replace(',','.')):.2f}",'market':str(r.get('Market','-')),'barkod':str(r[barkod_col])}
-        for _,r in df[maske].iterrows()
+        {
+            'urun': str(r[urun_col]),
+            'fiyat': f"{float(str(r[fiyat_col]).replace(',', '.')):.2f}",
+            'market': str(r[market_col]) if market_col else '-',
+            'barkod': str(r[barkod_col]),
+            'tarih': str(r[tarih_col]) if tarih_col else '-'
+        }
+        for _, r in df[maske].iterrows()
     ])
 
 @app.route('/gecmis')
