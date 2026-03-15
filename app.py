@@ -430,12 +430,12 @@ async function tumunuSil() {
 async function whatsappGonder() {
   const data = await fetch('/eksik-liste').then(r=>r.json());
   if (!data.length) { toast('Liste boş!', '#e74c3c'); return; }
-  let metin = '🛒 *EKSİK ÜRÜN LİSTESİ*\n\n';
+  let metin = '🛒 *EKSİK ÜRÜN LİSTESİ*' + '\n\n';
   data.forEach((r,i) => {
     const durum = r.durum==='Alındı' ? '✅' : '⬜';
-    metin += `${durum} ${i+1}. ${r.urun} — ${parseFloat(r.fiyat||0).toFixed(2)} ₺ (${r.market})\n`;
+    metin += durum + ' ' + (i+1) + '. ' + r.urun + ' — ' + parseFloat(r.fiyat||0).toFixed(2) + ' ₺ (' + r.market + ')' + '\n';
   });
-  metin += `\n📅 ${new Date().toLocaleDateString('tr-TR')}`;
+  metin += '\n📅 ' + new Date().toLocaleDateString('tr-TR');
   window.open('https://wa.me/?text=' + encodeURIComponent(metin), '_blank');
 }
 
