@@ -38,13 +38,22 @@ def google_sheets_yukle():
     try:
         sheets = sheet_listesi_al()
         if not sheets:
+            # Excel sheet adlarını al, gid sırasıyla eşleştir
+            excel_sheets = []
+            if os.path.exists("market_fisi_urunler_2.xlsx"):
+                try:
+                    xl2 = pd.ExcelFile("market_fisi_urunler_2.xlsx")
+                    excel_sheets = xl2.sheet_names
+                except:
+                    pass
             for i in range(5):
                 url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={i}"
                 try:
                     r = requests.get(url, timeout=10)
                     if r.status_code == 200 and len(r.content) > 100:
                         df = pd.read_csv(io.StringIO(r.text))
-                        df['Market'] = f"Sayfa{i+1}"
+                        market_adi = excel_sheets[i] if i < len(excel_sheets) else f"Sayfa{i+1}"
+                        df['Market'] = market_adi
                         tum.append(df)
                 except:
                     break
@@ -73,6 +82,14 @@ def google_sheets_yukle():
         for sheet in xl.sheet_names:
             df = pd.read_excel("market_fisi_urunler_2.xlsx", sheet_name=sheet)
             df['Market'] = sheet
+            # Bozuk encoding düzelt (latin1 → utf-8)
+            yeni_kolonlar = {}
+            for col in df.columns:
+                try:
+                    yeni_kolonlar[col] = col.encode('latin1').decode('utf-8')
+                except:
+                    yeni_kolonlar[col] = col
+            df.rename(columns=yeni_kolonlar, inplace=True)
             tum2.append(df)
         return pd.concat(tum2, ignore_index=True)
     return None
@@ -212,7 +229,7 @@ def ara():
     
     # Sütun adlarını esnek bul
     cols = df.columns.tolist()
-    urun_col  = next((c for c in cols if 'r' in c.lower() and 'n' in c.lower() and 'ad' in c.lower()), cols[1] if len(cols)>1 else cols[0])
+    urun_col  = next((c for c in cols if 'ürün' in c.lower() or 'urun' in c.lower() or 'ad' in c.lower()), cols[1] if len(cols)>1 else cols[0])
     fiyat_col = next((c for c in cols if 'fiyat' in c.lower() or 'price' in c.lower()), cols[2] if len(cols)>2 else cols[0])
     barkod_col= next((c for c in cols if 'barkod' in c.lower() or 'barcode' in c.lower()), cols[0])
     
