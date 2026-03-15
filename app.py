@@ -37,29 +37,20 @@ def sheet_listesi_al():
         return {}
 
 def google_sheets_yukle():
-    """Sadece ALIŞ FİYATLARI sayfasından veri çeker.
+    """ALIŞ FİYATLARI sayfasından veri çeker (GID sabit: 574689991).
     Sütun yapısı: Tarih | Ürün Adı | Barkod | Alış Fiyatı | Market
     """
+    ALIS_GID = "574689991"
     try:
-        sheets = sheet_listesi_al()
-        # ALIŞ FİYATLARI sayfasını bul
-        alis_gid = None
-        for sheet_name, gid in sheets.items():
-            norm = tr_normalize(sheet_name)
-            if 'alis' in norm and 'fiyat' in norm:
-                alis_gid = gid
-                print(f"✅ Alış Fiyatları sayfası bulundu: {sheet_name} (gid={gid})")
-                break
-        if alis_gid:
-            url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={alis_gid}"
-            r = requests.get(url, timeout=10)
-            if r.status_code == 200 and len(r.content) > 50:
-                df = pd.read_csv(io.StringIO(r.content.decode('utf-8')))
-                df = df.dropna(how='all')
-                df.columns = [c.strip() for c in df.columns]
-                print(f"✅ Alış Fiyatları yüklendi: {len(df)} kayıt, sütunlar: {df.columns.tolist()}")
-                return df
-        print("⚠️ ALIŞ FİYATLARI sayfası bulunamadı, mevcut sayfalar:", list(sheets.keys()))
+        url = f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={ALIS_GID}"
+        r = requests.get(url, timeout=10)
+        if r.status_code == 200 and len(r.content) > 50:
+            df = pd.read_csv(io.StringIO(r.content.decode('utf-8')))
+            df = df.dropna(how='all')
+            df.columns = [c.strip() for c in df.columns]
+            print(f"✅ Alış Fiyatları yüklendi: {len(df)} kayıt, sütunlar: {df.columns.tolist()}")
+            return df
+        print(f"⚠️ Sheets erişim hatası: HTTP {r.status_code}")
     except Exception as e:
         print(f"Sheets hatası: {e}")
 
