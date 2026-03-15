@@ -376,13 +376,14 @@ async function eksikYenile() {
     document.getElementById('eksik-tablo').innerHTML = '<tr><td colspan="5" class="bos">📭 Eksik liste boş.</td></tr>';
     return;
   }
+  window._eksik = data;
   document.getElementById('eksik-tablo').innerHTML = data.map((r,i)=>`
     <tr id="eksik-row-${i}">
       <td>${r.urun}</td>
       <td class="fiyat">💰 ${parseFloat(r.fiyat||0).toFixed(2)} ₺</td>
       <td><span class="market-badge">${r.market}</span></td>
-      <td><span class="durum-badge ${r.durum==='Alındı'?'alindi':''}" onclick="durumDegistir(${i},'${r.urun.replace(/'/g,"\\'")}','${r.durum}')">${r.durum==='Alındı'?'✅ Alındı':'⏳ Bekliyor'}</span></td>
-      <td><button class="sil-btn" onclick="eksikSil(${i},'${r.urun.replace(/'/g,"\\'")}')">🗑</button></td>
+      <td><span class="durum-badge ${r.durum==='Alındı'?'alindi':''}" onclick="durumDegistir2(${i})">${r.durum==='Alındı'?'✅ Alındı':'⏳ Bekliyor'}</span></td>
+      <td><button class="sil-btn" onclick="eksikSil2(${i})">🗑</button></td>
     </tr>`).join('');
   eksikBadgeGuncelle(bekleyen);
 }
@@ -396,25 +397,27 @@ async function eksikBadgeGuncelle(sayi) {
   b.textContent = sayi; b.style.display = sayi > 0 ? 'inline' : 'none';
 }
 
-async function durumDegistir(idx, urun, mevcutDurum) {
-  const yeniDurum = mevcutDurum === 'Alındı' ? 'Bekliyor' : 'Alındı';
+async function durumDegistir2(i) {
+  const r = window._eksik[i];
+  const yeniDurum = r.durum === 'Alındı' ? 'Bekliyor' : 'Alındı';
   await fetch('/eksik-durum', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({urun, durum: yeniDurum})
+    body: JSON.stringify({urun: r.urun, durum: yeniDurum})
   });
   eksikYenile();
 }
 
-async function eksikSil(idx, urun) {
-  if (!confirm(urun + ' listeden silinsin mi?')) return;
+async function eksikSil2(i) {
+  const r = window._eksik[i];
+  if (!confirm(r.urun + ' listeden silinsin mi?')) return;
   await fetch('/eksik-sil', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({urun})
+    body: JSON.stringify({urun: r.urun})
   });
   eksikYenile();
-  toast('🗑 ' + urun + ' silindi', '#e74c3c');
+  toast('🗑 ' + r.urun + ' silindi', '#e74c3c');
 }
 
 async function tumunuSil() {
@@ -459,10 +462,12 @@ async function gecmisYukle() {
     <div class="card"><div class="sayi" style="color:#FF6600">${harcama.toFixed(2)} ₺</div><div class="etiket">Toplam Alış</div></div>`;
   document.getElementById('gecmis-tablo').innerHTML = !data.length
     ? '<tr><td colspan="4" class="bos">📭 Kayıt bulunamadı.</td></tr>'
-    : data.map(r=>`<tr onclick="tekUrunGrafik('${r.urun.replace(/'/g,"\\'")}')">
+    : data.map((r,gi)=>{
+        window._gecmis=window._gecmis||[]; window._gecmis[gi]=r;
+        return `<tr onclick="tekUrunGrafik2(${gi})">
         <td style="color:#a8a8b3">${r.tarih}</td><td>${r.urun}</td>
         <td class="fiyat">💰 ${parseFloat(r.fiyat).toFixed(2)} ₺</td>
-        <td><span class="market-badge">${r.market}</span></td></tr>`).join('');
+        <td><span class="market-badge">${r.market}</span></td></tr>`;}).join('');
   const zamData = await fetch('/zamlanlar').then(r=>r.json());
   document.getElementById('zam-listesi').innerHTML = !zamData.length
     ? '<div class="bos" style="padding:16px">Karşılaştırmak için aynı ürünün farklı tarihlerdeki fiyatını girin.</div>'
@@ -476,6 +481,7 @@ async function gecmisYukle() {
   if(urun && data.length) tekUrunGrafik(urun);
 }
 
+function tekUrunGrafik2(i) { tekUrunGrafik(window._gecmis[i].urun); }
 function tekUrunGrafik(urunAdi) {
   fetch('/gecmis?urun='+encodeURIComponent(urunAdi)).then(r=>r.json()).then(data=>{
     if(!data.length) return;
