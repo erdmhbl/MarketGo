@@ -452,9 +452,15 @@ def ara():
     df = veri_al()
     if not q or df is None: return jsonify([])
     cols = df.columns.tolist()
-    urun_col  = next((c for c in cols if 'ürün' in c.lower() or 'urun' in c.lower() or 'ad' in c.lower()), cols[1] if len(cols)>1 else cols[0])
-    fiyat_col = next((c for c in cols if 'fiyat' in c.lower() or 'price' in c.lower()), cols[2] if len(cols)>2 else cols[0])
-    barkod_col= next((c for c in cols if 'barkod' in c.lower() or 'barcode' in c.lower()), cols[0])
+    # Encoding bozuksa düzelt
+    cols_norm = []
+    for c in cols:
+        try: cols_norm.append(c.encode('latin1').decode('utf-8'))
+        except: cols_norm.append(c)
+    col_map = dict(zip(cols_norm, cols))
+    urun_col  = col_map.get(next((c for c in cols_norm if 'ürün' in c.lower() or 'urun' in c.lower() or 'ad' in c.lower()), cols_norm[1] if len(cols_norm)>1 else cols_norm[0]))
+    fiyat_col = col_map.get(next((c for c in cols_norm if 'fiyat' in c.lower() or 'price' in c.lower()), cols_norm[2] if len(cols_norm)>2 else cols_norm[0]))
+    barkod_col= col_map.get(next((c for c in cols_norm if 'barkod' in c.lower() or 'barcode' in c.lower()), cols_norm[0]))
     varyantlar = tr_varyantlar(q)
     maske = pd.Series([False] * len(df))
     for v in varyantlar:
