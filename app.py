@@ -472,11 +472,11 @@ async function gecmisYukle() {
   document.getElementById('zam-listesi').innerHTML = !zamData.length
     ? '<div class="bos" style="padding:16px">Karşılaştırmak için aynı ürünün farklı tarihlerdeki fiyatını girin.</div>'
     : `<table><thead><tr><th>Ürün</th><th>İlk Fiyat</th><th>Son Fiyat</th><th>Değişim</th></tr></thead><tbody>
-        ${zamData.map(z=>{
-          const y=((z.son-z.ilk)/z.ilk*100).toFixed(1);
-          const c=z.son>z.ilk?'zam-up':'zam-down';
-          const i=z.son>z.ilk?'▲':'▼';
-          return `<tr><td>${z.urun}</td><td>${z.ilk.toFixed(2)} ₺</td><td>${z.son.toFixed(2)} ₺</td><td><span class="zam-badge ${c}">${i} %${Math.abs(y)}</span></td></tr>`;
+        ${zamData.map(function(z){
+          var y=((z.son-z.ilk)/z.ilk*100).toFixed(1);
+          var c=z.son>z.ilk?'zam-up':'zam-down';
+          var arr=z.son>z.ilk?'&#9650;':'&#9660;';
+          return '<tr><td>'+z.urun+'</td><td>'+z.ilk.toFixed(2)+' ₺</td><td>'+z.son.toFixed(2)+' ₺</td><td><span class="zam-badge '+c+'">'+arr+' %'+Math.abs(y)+'</span></td></tr>';
         }).join('')}</tbody></table>`;
   if(urun && data.length) tekUrunGrafik(urun);
 }
