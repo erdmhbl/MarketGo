@@ -517,12 +517,11 @@ def ara():
     df = veri_al()
     if not q or df is None: return jsonify([])
     cols = df.columns.tolist()
-    col_norm = {tr_normalize(c): c for c in cols}
-    urun_col   = col_norm.get(next((k for k in col_norm if 'urun' in k or 'adi' in k or 'ad' in k), cols[1] if len(cols)>1 else cols[0]))
-    fiyat_col  = col_norm.get(next((k for k in col_norm if 'fiyat' in k), cols[3] if len(cols)>3 else cols[2]))
-    barkod_col = col_norm.get(next((k for k in col_norm if 'barkod' in k), cols[2] if len(cols)>2 else cols[0]))
-    market_col = col_norm.get(next((k for k in col_norm if 'market' in k), cols[4] if len(cols)>4 else cols[-1]))
-    tarih_col  = col_norm.get(next((k for k in col_norm if 'tarih' in k), cols[0]))
+    tarih_col  = next((c for c in cols if 'tarih' in tr_normalize(c)), cols[0])
+    urun_col   = next((c for c in cols if 'urun' in tr_normalize(c) or 'adi' in tr_normalize(c)), cols[1] if len(cols)>1 else cols[0])
+    barkod_col = next((c for c in cols if 'barkod' in tr_normalize(c)), cols[2] if len(cols)>2 else cols[0])
+    fiyat_col  = next((c for c in cols if 'fiyat' in tr_normalize(c)), cols[3] if len(cols)>3 else cols[2])
+    market_col = next((c for c in cols if 'market' in tr_normalize(c)), cols[4] if len(cols)>4 else cols[-1])
     maske = tr_aramayi_hazirla(df[urun_col], q) | tr_aramayi_hazirla(df[barkod_col], q)
     return jsonify([{
         'urun':   str(r[urun_col]),
